@@ -11,7 +11,7 @@
     "build:es2015modules": "cross-env NODE_ENV=production BABEL_ENV=modules babel ./src/index.js -o ./build/index.es.js",
     "prebuild": "rimraf build",
     "preversion": "yarn test",
-    "test": "jest",
+    "test": "jest --passWithNoTests",
     "test:watch": "npm test -- --watch",
     "version": "yarn build && npm publish build"
   },
