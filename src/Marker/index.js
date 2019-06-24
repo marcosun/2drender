@@ -8,20 +8,20 @@ import {
 import Scheduler from '../Scheduler';
 
 /**
- * position: A given position [x, y] in the original canvas cartesian coordinate.
+ * position: A given position [x, y] in the original canvas cartesian coordinate system.
  * rotationOrigin: Rotate around this [x, y] point.
  * rotation: Rotation radians.
- * deltaMove: Move [x, y] in the coordinate after rotated.
- * Assume coordinate system rotate around P (rotationOrigin) with rotation angle theta (rotation).
- * Given an arbitrary point A (position), what is its position A' after rotate?
+ * deltaMove: Move horizontally and vertically after rotation.
+ * Assume coordinate system rotates around P (rotationOrigin) with rotation angle theta (rotation).
+ * Given an arbitrary point A (position), what is its position A' after rotation?
  * We come across this algorithm: OA' = OP + PA', where PA' = M * PA, where M is rotation matrix.
- * If there is a coordinate system move after rotation (deltaMove), the algorithm becomes:
+ * If there is a horizontal and vertical move after rotation (deltaMove), the algorithm becomes:
  * OA' = OP + PA' + delta.
  */
 function getTransformedAndRotatedPosition(position, rotationOrigin, rotation, deltaMove) {
   /**
-   * Marker understands clockwise rotation however rotation matrix algo defines
-   * anti-clockwise rotation.
+   * Marker understands clockwise rotation however rotation matrix algorithm defines
+   * anti-clockwise rotation. This is why we always have negative rotation angle.
    */
   const rotationMatrix = matrix([
     [Math.cos(-rotation), -Math.sin(-rotation)],
@@ -35,7 +35,7 @@ function getTransformedAndRotatedPosition(position, rotationOrigin, rotation, de
   const OAVector = position;
   const PAVector = add(POVector, OAVector);
   /**
-   * A positive delta move actually moves coordinate system to bottom right hand side.
+   * A positive delta move moves coordinate system to bottom right hand side.
    */
   const deltaVector = unaryMinus(deltaMove);
 
@@ -64,20 +64,21 @@ function loadImage(imageSource) {
 class Marker {
   /**
    * Render a single marker on the given canvas context.
-   * Rotate coordinate first, then transform coordinate, and finally render marker image.
+   * Rotate coordinate first, then move horizontally and vertically,
+   * and finally render marker image.
    * Order is critical and must be observed.
    */
   static async render(ctx, icon, height, width, position, anchorOrigin, rotation) {
     const markerImage = await loadImage(icon);
 
     /**
-     * Render marker methods contain coordinate transformation and rotation which must be
-     * restored as soon as render completes.
+     * Methods to render marker contain coordinate horizontal and vertical move and rotation
+     * which must be restored as soon as render completes.
      */
     ctx.save();
 
     /**
-     * Move coordinate centre point to get ready for rotation.
+     * Move coordinate origin point to rotation point to get ready for rotation.
      */
     ctx.translate(position[0], position[1]);
     /**
@@ -85,7 +86,8 @@ class Marker {
      */
     ctx.rotate(rotation);
     /**
-     * Move coordinate centre point back to its origin, and transform anchor origin after rotation.
+     * Move coordinate origin point back from rotation point, and move coordinate system
+     * horizontally and vertically.
      */
     ctx.translate(-position[0] + anchorOrigin[0], -position[1] + anchorOrigin[1]);
     /**
@@ -148,7 +150,7 @@ class Marker {
   findByPosition({ x, y }) {
     return this.data.filter(({ anchorOrigin, height, position, rotation, width }) => {
       /**
-       * Find position in the rotated and moved coordinate system.
+       * Find position in the rotated and horizontally and vertically moved coordinate system.
        */
       const [
         transformedX,
@@ -162,7 +164,7 @@ class Marker {
 
       /**
        * Given the fact that both positions are in the same coordinate system,
-       * a rectangle contains a given position if the following condition matches.
+       * a rectangle contains a given position if the following condition passes.
        */
       return position[0] <= transformedX && transformedX <= position[0] + width &&
         position[1] <= transformedY && transformedY <= position[1] + height;
@@ -197,7 +199,7 @@ Marker.propTypes = {
   data: PropTypes.arrayOf(PropTypes.shape({
     /**
      * Anchor origin is a point where it will be placed to the given position.
-     * A common use case would be defining marker anchor origin point as centre point.
+     * A common use case would be defining marker centre point as anchor origin .
      * i.e. [x, y] Default [0, 0].
      */
     anchorOrigin: PropTypes.arrayOf(PropTypes.number),
