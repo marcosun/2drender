@@ -18,6 +18,10 @@
   "repository": "git@github.com:marcosun/2drender.git",
   "author": "marcosun <marcoinbristol@gmail.com>",
   "license": "MIT",
+  "dependencies": {
+    "mathjs": "^6.0.2",
+    "prop-types": "^15.7.2"
+  },
   "devDependencies": {
     "@babel/cli": "^7.4.4",
     "@babel/core": "^7.4.5",
@@ -42,9 +46,5 @@
     "roots": [
       "<rootDir>/src/"
     ]
-  },
-  "dependencies": {
-    "mathjs": "^6.0.2",
-    "prop-types": "^15.7.2"
   }
 }
