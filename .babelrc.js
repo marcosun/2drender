@@ -35,5 +35,13 @@ module.exports = {
    * Ignore test files in production build.
    */
   "ignore": NODE_ENV === 'production' ? ['**/*.test.js'] : [],
+  "plugins": [
+    // Stage 1
+    "@babel/plugin-proposal-export-default-from",
+    // Stage 2
+    "@babel/plugin-proposal-export-namespace-from",
+    // Stage 3
+    ["@babel/plugin-proposal-class-properties", { "loose": false }],
+  ],
   "presets": presets,
 };
