@@ -152,7 +152,7 @@ Line.propTypes = {
    * Data structure must contain the following properties if getSnapshotBeforeRender is not defined,
    * can be anything if getSnapshotBeforeRender is defined, only if getSnapshotBeforeRender returns
    * a data structure of this kind.
-   * Interanally, there is a renderProps property which persists properties calling canvas APIs.
+   * Internally, there is a renderProps property which persists properties calling canvas APIs.
    * These properties are returned value from getSnapshotBeforeRender function.
    */
   data: PropTypes.arrayOf(PropTypes.shape({
