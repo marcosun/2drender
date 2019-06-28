@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import isNullVoid from '../utils/isNullVoid';
 import Scheduler from '../Scheduler';
 
 class Line {
@@ -91,6 +92,10 @@ class Line {
    */
   findByPosition({ x, y }) {
     return this.data.filter(({ renderProps, width }) => {
+      /**
+       * This scenario happens if mouse event triggers before render completes.
+       */
+      if (isNullVoid(renderProps)) return false;
       /**
        * Use isPointInStroke method to find whether a given point is on the polyline.
        */
