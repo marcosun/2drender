@@ -68,7 +68,7 @@ class Marker {
    * and finally render marker image.
    * Order is critical and must be observed.
    */
-  static async render(ctx, icon, height, width, position, anchorOrigin, rotation) {
+  static async render(markerObject, ctx, icon, height, width, position, anchorOrigin, rotation) {
     const markerImage = await loadImage(icon);
 
     /**
@@ -90,6 +90,20 @@ class Marker {
      * horizontally and vertically.
      */
     ctx.translate(-position[0] + anchorOrigin[0], -position[1] + anchorOrigin[1]);
+
+    /**
+     * Persist render properties. It will be used in mouse events to find whether a mouse pointer is
+     * on a marker.
+     */
+    markerObject.renderProps = {
+      anchorOrigin,
+      height,
+      icon,
+      position,
+      rotation,
+      width,
+    };
+
     /**
      * Scale marker height and width.
      */
@@ -168,6 +182,11 @@ class Marker {
        */
       return position[0] <= transformedX && transformedX <= position[0] + width &&
         position[1] <= transformedY && transformedY <= position[1] + height;
+    }).map(({ renderProps, ...other }) => {
+      /**
+       * Internal render properties should not expose.
+       */
+      return other;
     });
   }
 
@@ -175,15 +194,17 @@ class Marker {
    * Draw markers one by one.
    */
   render() {
-    this.scheduler.execute(this.data, ({
-      anchorOrigin,
-      height,
-      icon,
-      position,
-      rotation,
-      width,
-    }) => {
-      Marker.render(this.ctx, icon, height, width, position, anchorOrigin, rotation);
+    this.scheduler.execute(this.data, (eachMarker) => {
+      const {
+        anchorOrigin,
+        height,
+        icon,
+        position,
+        rotation,
+        width,
+      } = eachMarker;
+
+      Marker.render(eachMarker, this.ctx, icon, height, width, position, anchorOrigin, rotation);
     }).catch(() => { /* Scheduler throws error if previous function is not completed. */ });
   }
 }
@@ -195,6 +216,8 @@ Marker.propTypes = {
   ctx: PropTypes.object.isRequired,
   /**
    * A list of markers.
+   * Internally, there is a renderProps property which persists properties calling canvas APIs.
+   * This design is in order to compatible to getSnapshotBeforeRender in the future.
    */
   data: PropTypes.arrayOf(PropTypes.shape({
     /**
