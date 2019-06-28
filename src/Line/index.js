@@ -5,7 +5,7 @@ class Line {
   /**
    * Render a single line on the given canvas context.
    */
-  static render(ctx, color, path, width) {
+  static render(ctx, lineObject, color, path, width) {
     /**
      * Skip if it doesn't have a line width.
      */
@@ -16,7 +16,7 @@ class Line {
     if (path.length <= 1) return;
 
     /**
-     * Create a path 2D instance to simplify finding a given point is on the polyline.
+     * Create a path 2D instance to simplify finding whether a given point is on the polyline.
      * See findByPosition function for more details.
      */
     const path2D = new Path2D();
@@ -42,6 +42,17 @@ class Line {
      */
     ctx.strokeStyle = color;
     ctx.lineWidth = width;
+
+    /**
+     * Persist render properties. It will be used in mouse events to find whether a mouse pointer is
+     * on a polyline.
+     */
+    lineObject.renderProps = {
+      color,
+      path,
+      path2D,
+      width,
+    };
 
     ctx.stroke(path2D);
   }
@@ -108,7 +119,7 @@ class Line {
        */
       const roundedWidth = Math.round(width || 1);
 
-      Line.render(this.ctx, color, roundedPath, roundedWidth);
+      Line.render(this.ctx, eachLine, color, roundedPath, roundedWidth);
     }).catch(() => { /* Scheduler throws error if previous function is not completed. */ });
   }
 }
@@ -121,8 +132,10 @@ Line.propTypes = {
   /**
    * A list of lines.
    * Data structure must contain the following properties if getSnapshotBeforeRender is not defined,
-   * can be anything if getSnapshotBeforeRender is defined only if getSnapshotBeforeRender returns
+   * can be anything if getSnapshotBeforeRender is defined, only if getSnapshotBeforeRender returns
    * a data structure of this kind.
+   * Interanally, there is a renderProps property which persists properties calling canvas APIs.
+   * These properties are returned value from getSnapshotBeforeRender function.
    */
   data: PropTypes.arrayOf(PropTypes.shape({
     /**
