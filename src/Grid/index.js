@@ -8,7 +8,7 @@ class Grid {
    * Apply image cache to reduce the number of canvas API calls.
    */
   static render(
-    ctx, cache, cacheCanvas, cacheCtx,
+    gridObject, ctx, cache, cacheCanvas, cacheCtx,
     origin, width, height, color, borderColor,
   ) {
     /**
@@ -39,6 +39,19 @@ class Grid {
        */
       cache[cacheKey] = image;
     }
+
+    /**
+     * Persist render properties. It will be used in mouse events to find whether a mouse pointer is
+     * on a grid.
+     */
+    gridObject.renderProps = {
+      borderColor,
+      color,
+      height,
+      origin,
+      width,
+    };
+
     ctx.putImageData(image, origin[0], origin[1]);
   }
 
@@ -128,6 +141,11 @@ class Grid {
   findByPosition({ x, y }) {
     return this.data.filter(({ height, origin, width }) => {
       return origin[0] <= x && x <= origin[0] + width && origin[1] <= y && y <= origin[1] + height;
+    }).map(({ renderProps, ...other }) => {
+      /**
+       * Internal render properties should not expose.
+       */
+      return other;
     });
   }
 
@@ -135,9 +153,17 @@ class Grid {
    * Render grids one by one.
    */
   render() {
-    this.scheduler.execute(this.data, ({ borderColor, color, height, origin, width }) => {
+    this.scheduler.execute(this.data, (eachGrid) => {
+      const {
+        borderColor,
+        color,
+        height,
+        origin,
+        width,
+      } = eachGrid;
+
       Grid.render(
-        this.ctx, this.cache, this.cacheCanvas, this.cacheCtx,
+        eachGrid, this.ctx, this.cache, this.cacheCanvas, this.cacheCtx,
         origin, width, height, color, borderColor,
       );
     }).catch(() => { /* Scheduler throws error if previous function is not completed. */ });
@@ -152,6 +178,8 @@ Grid.propTypes = {
   /**
    * A list of grids.
    * Grid definitions include grid shape and styles.
+   * Internally, there is a renderProps property which persists properties calling canvas APIs.
+   * This design is in order to compatible to getSnapshotBeforeRender in the future.
    */
   data: PropTypes.arrayOf(PropTypes.shape({
     /**
