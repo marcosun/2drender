@@ -87,6 +87,24 @@ class Line {
   }
 
   /**
+   * Return a list of lines that contains the given position.
+   */
+  findByPosition({ x, y }) {
+    return this.data.filter(({ renderProps, width }) => {
+      /**
+       * Use isPointInStroke method to find whether a given point is on the polyline.
+       */
+      this.ctx.lineWidth = width;
+      return this.ctx.isPointInStroke(renderProps.path2D, x, y);
+    }).map(({ renderProps, ...other }) => {
+      /**
+       * Internal render properties should not expose.
+       */
+      return other;
+    });
+  }
+
+  /**
    * Draw lines one by one.
    */
   render() {
