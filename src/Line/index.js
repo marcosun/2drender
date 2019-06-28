@@ -5,7 +5,7 @@ class Line {
   /**
    * Render a single line on the given canvas context.
    */
-  static render(ctx, lineObject, color, path, width) {
+  static render(lineObject, ctx, color, path, width) {
     /**
      * Skip if it doesn't have a line width.
      */
@@ -137,7 +137,7 @@ class Line {
        */
       const roundedWidth = Math.round(width || 1);
 
-      Line.render(this.ctx, eachLine, color, roundedPath, roundedWidth);
+      Line.render(eachLine, this.ctx, color, roundedPath, roundedWidth);
     }).catch(() => { /* Scheduler throws error if previous function is not completed. */ });
   }
 }
