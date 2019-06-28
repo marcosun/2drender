@@ -16,6 +16,24 @@ class Line {
     if (path.length <= 1) return;
 
     /**
+     * Create a path 2D instance to simplify finding a given point is on the polyline.
+     * See findByPosition function for more details.
+     */
+    const path2D = new Path2D();
+
+    /**
+     * Move pointer to the line starting point.
+     */
+    const [startingX, startingY] = path[0];
+    path2D.moveTo(startingX, startingY);
+    /**
+     * Go through all points on line path to complete a polyline.
+     */
+    path.slice(1).forEach(([x, y]) => {
+      path2D.lineTo(x, y);
+    });
+
+    /**
      * Begin a new line.
      */
     ctx.beginPath();
@@ -24,18 +42,8 @@ class Line {
      */
     ctx.strokeStyle = color;
     ctx.lineWidth = width;
-    /**
-     * Move pointer to the line starting point.
-     */
-    const [startingX, startingY] = path[0];
-    ctx.moveTo(startingX, startingY);
-    /**
-     * Go through all points on line path to complete a polyline.
-     */
-    path.slice(1).forEach(([x, y]) => {
-      ctx.lineTo(x, y);
-    });
-    ctx.stroke();
+
+    ctx.stroke(path2D);
   }
 
   constructor(props = {}) {
