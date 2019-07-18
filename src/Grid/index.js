@@ -111,25 +111,43 @@ class Grid {
    */
   config(props) {
     const {
-      ctx,
+      canvas,
       data = [],
+      dpr = 1,
+      height,
+      width,
     } = props;
+
     /**
-     * Save parameters as instance properties.
+     * These are required properties.
      */
-    this.ctx = ctx;
-    // this.coordinateTransformation = coordinateTransformation;
+    if (isNullVoid(canvas) || isNullVoid(height) || isNullVoid(width)) return;
+
+    this.dpr = dpr;
+
+    /**
+     * We will manipulate canvas context later.
+     */
+    this.ctx = canvas.getContext('2d');
+    /**
+     * Clear canvas. Always clear canvas before render.
+     * 2K device has dpr 2. Canvas is painted on a double size area. With canvas CSS scales down
+     * by half shall we have sharp images.
+     * Change canvas width restores canvas scale. Always set the correct scale so that callers are
+     * unaware of the implementation details of DPR.
+     */
+    canvas.height = height * this.dpr;
+    canvas.width = width * this.dpr;
+    this.ctx.scale(this.dpr, this.dpr);
+
     /**
      * Round number values because decimal points significantly affects canvas performance.
      */
-    this.data = data.map(({ height = 0, origin, width = 0, ...other }) => {
-      /**
-       * Math.round and Math.floor have a gap between grids.
-       */
+    this.data = data.map(({ height: gridHeight = 0, origin, width: gridWidth = 0, ...other }) => {
       return {
-        height: Math.ceil(height),
-        origin: [Math.ceil(origin[0]), Math.ceil(origin[1])],
-        width: Math.ceil(width),
+        height: Math.round(gridHeight * this.dpr),
+        origin: [Math.round(origin[0] * this.dpr), Math.round(origin[1] * this.dpr)],
+        width: Math.round(gridWidth * this.dpr),
         ...other,
       };
     });
@@ -140,12 +158,31 @@ class Grid {
    */
   findByPosition({ x, y }) {
     return this.data.filter(({ height, origin, width }) => {
-      return origin[0] <= x && x <= origin[0] + width && origin[1] <= y && y <= origin[1] + height;
-    }).map(({ renderProps, ...other }) => {
+      /**
+       * Canvas is scaled to make image sharper in high DPR devices. Therefore, when finding lines
+       * by mouse events, mouse pointer position should scale by DPR ratio.
+       */
+      return origin[0] <= x * this.dpr
+        && x * this.dpr <= origin[0] + width
+        && origin[1] <= y * this.dpr
+        && y * this.dpr <= origin[1] + height;
+    }).map(({
+      height,
+      origin,
+      renderProps,
+      width,
+      ...other
+    }) => {
       /**
        * Internal render properties should not expose.
+       * Scale down by DPR. DPR implementation details should not be awared by callers.
        */
-      return other;
+      return {
+        height: Math.round(height / this.dpr),
+        origin: [Math.round(origin[0] / this.dpr), Math.round(origin[1] / this.dpr)],
+        width: Math.round(width / this.dpr),
+        ...other,
+      };
     });
   }
 
@@ -172,9 +209,9 @@ class Grid {
 
 Grid.propTypes = {
   /**
-   * Grids are drawn on this canvas 2D context.
+   * Grids are drawn on this canvas.
    */
-  ctx: PropTypes.object.isRequired,
+  canvas: PropTypes.object.isRequired,
   /**
    * A list of grids.
    * Grid definitions include grid shape and styles.
@@ -207,6 +244,25 @@ Grid.propTypes = {
      */
     width: PropTypes.number,
   })),
+  /**
+   * Device pixel ratio.
+   * 2K device has dpr 2. Canvas is painted on a double size area. With canvas CSS scales down
+   * by half shall we have sharp images. It is caller's duty to scale down canvas area to
+   * device screen size by setting CSS.
+   * https://www.html5rocks.com/en/tutorials/canvas/hidpi
+   * Default 1.
+   * I don't want to expose the implementation details of supporting high DPR devices to the user.
+   * Therefore, all configuration properties have unit of CSS pixel.
+   */
+  dpr: PropTypes.number,
+  /**
+   * Canvas height.
+   */
+  height: PropTypes.number.isRequired,
+  /**
+   * Canvas width.
+   */
+  width: PropTypes.number.isRequired,
 };
 
 export default Grid;
