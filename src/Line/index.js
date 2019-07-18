@@ -75,20 +75,44 @@ class Line {
    */
   config(props) {
     const {
-      ctx,
+      canvas,
       data = [],
+      dpr = 1,
       getSnapshotBeforeRender,
+      height,
+      width,
     } = props;
+
     /**
-     * Save parameters as instance properties.
+     * These are required properties.
      */
-    this.ctx = ctx;
+    if (isNullVoid(canvas) || isNullVoid(height) || isNullVoid(width)) return;
+
+    this.dpr = dpr;
+
+    /**
+     * We will manipulate canvas context later.
+     */
+    this.ctx = canvas.getContext('2d');
+    /**
+     * Clear canvas. Always clear canvas before render.
+     * 2K device has dpr 2. Canvas is painted on a double size area. With canvas CSS scales down
+     * by half shall we have sharp images.
+     * Change canvas width restores canvas scale. Always set the correct scale so that callers are
+     * unaware of the implementation details of DPR.
+     */
+    canvas.height = height * this.dpr;
+    canvas.width = width * this.dpr;
+    this.ctx.scale(this.dpr, this.dpr);
+
     this.data = data;
     this.getSnapshotBeforeRender = getSnapshotBeforeRender;
   }
 
   /**
    * Return a list of lines that contains the given position.
+   * The received coordinates are not scalled by DPR because I presume coordinates to be mouse
+   * pointer positions.
    */
   findByPosition({ x, y }) {
     return this.data.filter(({ renderProps, width }) => {
@@ -100,7 +124,11 @@ class Line {
        * Use isPointInStroke method to find whether a given point is on the polyline.
        */
       this.ctx.lineWidth = width;
-      return this.ctx.isPointInStroke(renderProps.path2D, x, y);
+      /**
+       * Canvas is scaled to make image sharper in high DPR devices. Therefore, when finding lines
+       * by mouse events, mouse pointer position should scale by DPR ratio.
+       */
+      return this.ctx.isPointInStroke(renderProps.path2D, x * this.dpr, y * this.dpr);
     }).map(({ renderProps, ...other }) => {
       /**
        * Internal render properties should not expose.
@@ -149,9 +177,9 @@ class Line {
 
 Line.propTypes = {
   /**
-   * Lines are drawn on this canvas 2D context.
+   * Lines are drawn on this canvas.
    */
-  ctx: PropTypes.object.isRequired,
+  canvas: PropTypes.object.isRequired,
   /**
    * A list of lines.
    * Data structure must contain the following properties if getSnapshotBeforeRender is not defined,
@@ -177,6 +205,17 @@ Line.propTypes = {
     width: PropTypes.number,
   })),
   /**
+   * Device pixel ratio.
+   * 2K device has dpr 2. Canvas is painted on a double size area. With canvas CSS scales down
+   * by half shall we have sharp images. It is caller's duty to scale down canvas area to
+   * device screen size by setting CSS.
+   * https://www.html5rocks.com/en/tutorials/canvas/hidpi
+   * Default 1.
+   * I don't want to expose the implementation details of supporting high DPR devices to the user.
+   * Therefore, all configuration properties have unit of CSS pixel.
+   */
+  dpr: PropTypes.number,
+  /**
    * getSnapshotBeforeRender is invoked right before calling canvas API to draw a segment of lines.
    * It enables you to do time consuming manipulations of each line while taking advantage of
    * none UI blocking tricks. If those time consuming works are done by yourself before passing
@@ -185,6 +224,14 @@ Line.propTypes = {
    * defined in data property (color, path, and width).
    */
   getSnapshotBeforeRender: PropTypes.func,
+  /**
+   * Canvas height.
+   */
+  height: PropTypes.number.isRequired,
+  /**
+   * Canvas width.
+   */
+  width: PropTypes.number.isRequired,
 };
 
 export default Line;
