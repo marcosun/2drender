@@ -5,6 +5,7 @@ import {
   multiply,
   unaryMinus,
 } from 'mathjs';
+import isNullVoid from '../utils/isNullVoid';
 import Scheduler from '../Scheduler';
 
 /**
@@ -129,30 +130,41 @@ class Marker {
    */
   config(props) {
     const {
-      ctx,
+      canvas,
       data = [],
+      height,
+      width,
     } = props;
+
     /**
-     * Save parameters as instance properties.
+     * These are required properties.
      */
-    this.ctx = ctx;
+    if (isNullVoid(canvas) || isNullVoid(height) || isNullVoid(width)) return;
+
+    /**
+     * We will manipulate canvas context later.
+     */
+    this.ctx = canvas.getContext('2d');
+    canvas.height = height;
+    canvas.width = width;
+
     /**
      * Round number values because decimal points significantly affects canvas performance.
      */
     this.data = data.map(({
       anchorOrigin = [0, 0],
-      height,
+      height: markerHeight,
       position,
       rotation = 0,
-      width,
+      width: markerWidth,
       ...other
     }) => {
       return {
         anchorOrigin: [Math.round(anchorOrigin[0]), Math.round(anchorOrigin[1])],
-        height: Math.round(height),
+        height: Math.round(markerHeight),
         position: [Math.round(position[0]), Math.round(position[1])],
         rotation,
-        width: Math.round(width),
+        width: Math.round(markerWidth),
         ...other,
       };
     });
@@ -209,11 +221,14 @@ class Marker {
   }
 }
 
+/**
+ * Marker natively supports high DPR devices by passing through high resolution images.
+ */
 Marker.propTypes = {
   /**
-   * Markers are drawn on this canvas 2D context.
+   * Markers are drawn on this canvas.
    */
-  ctx: PropTypes.object.isRequired,
+  canvas: PropTypes.object.isRequired,
   /**
    * A list of markers.
    * Internally, there is a renderProps property which persists properties calling canvas APIs.
@@ -249,6 +264,15 @@ Marker.propTypes = {
      */
     width: PropTypes.number.isRequired,
   })),
+  /**
+   * Canvas height.
+   */
+  height: PropTypes.number.isRequired,
+  /**
+   * Canvas width.
+   */
+  width: PropTypes.number.isRequired,
+
 };
 
 export default Marker;
