@@ -174,7 +174,14 @@ class Marker {
    * Return a list of markers that contains the given position.
    */
   findByPosition({ x, y }) {
-    return this.data.filter(({ anchorOrigin, height, position, rotation, width }) => {
+    return this.data.filter(({ renderProps }) => {
+      /**
+       * This scenario happens if mouse event triggers before render completes.
+       */
+      if (isNullVoid(renderProps)) return false;
+
+      const { anchorOrigin, height, position, rotation, width } = renderProps;
+
       /**
        * Find position in the rotated and horizontally and vertically moved coordinate system.
        */
@@ -192,8 +199,10 @@ class Marker {
        * Given the fact that both positions are in the same coordinate system,
        * a rectangle contains a given position if the following condition passes.
        */
-      return position[0] <= transformedX && transformedX <= position[0] + width &&
-        position[1] <= transformedY && transformedY <= position[1] + height;
+      return position[0] <= transformedX
+        && transformedX <= position[0] + width
+        && position[1] <= transformedY
+        && transformedY <= position[1] + height;
     }).map(({ renderProps, ...other }) => {
       /**
        * Internal render properties should not expose.
