@@ -96,7 +96,7 @@ class Line {
     this.ctx = canvas.getContext('2d');
     /**
      * Clear canvas. Always clear canvas before render.
-     * 2K device has dpr 2. Canvas is painted on a double size area. With canvas CSS scales down
+     * 4K device has dpr 2. Canvas is painted on a quadruple size area. With canvas CSS scales down
      * by half shall we have sharp images.
      * Change canvas width restores canvas scale. Always set the correct scale so that callers are
      * unaware of the implementation details of DPR.
@@ -115,11 +115,14 @@ class Line {
    * pointer positions.
    */
   findByPosition({ x, y }) {
-    return this.data.filter(({ renderProps, width }) => {
+    return this.data.filter(({ renderProps }) => {
       /**
        * This scenario happens if mouse event triggers before render completes.
        */
       if (isNullVoid(renderProps)) return false;
+
+      const { path2D, width } = renderProps;
+
       /**
        * Use isPointInStroke method to find whether a given point is on the polyline.
        */
@@ -128,7 +131,7 @@ class Line {
        * Canvas is scaled to make image sharper in high DPR devices. Therefore, when finding lines
        * by mouse events, mouse pointer position should scale by DPR ratio.
        */
-      return this.ctx.isPointInStroke(renderProps.path2D, x * this.dpr, y * this.dpr);
+      return this.ctx.isPointInStroke(path2D, x * this.dpr, y * this.dpr);
     }).map(({ renderProps, ...other }) => {
       /**
        * Internal render properties should not expose.
@@ -206,7 +209,7 @@ Line.propTypes = {
   })),
   /**
    * Device pixel ratio.
-   * 2K device has dpr 2. Canvas is painted on a double size area. With canvas CSS scales down
+   * 4K device has dpr 2. Canvas is painted on a quadruple size area. With canvas CSS scales down
    * by half shall we have sharp images. It is caller's duty to scale down canvas area to
    * device screen size by setting CSS.
    * https://www.html5rocks.com/en/tutorials/canvas/hidpi
