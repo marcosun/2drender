@@ -131,7 +131,7 @@ class Grid {
     this.ctx = canvas.getContext('2d');
     /**
      * Clear canvas. Always clear canvas before render.
-     * 2K device has dpr 2. Canvas is painted on a double size area. With canvas CSS scales down
+     * 4K device has dpr 2. Canvas is painted on a quadruple size area. With canvas CSS scales down
      * by half shall we have sharp images.
      * Change canvas width restores canvas scale. Always set the correct scale so that callers are
      * unaware of the implementation details of DPR.
@@ -157,7 +157,14 @@ class Grid {
    * Return a list of grids that contains the given position.
    */
   findByPosition({ x, y }) {
-    return this.data.filter(({ height, origin, width }) => {
+    return this.data.filter(({ renderProps }) => {
+      /**
+       * This scenario happens if mouse event triggers before render completes.
+       */
+      if (isNullVoid(renderProps)) return false;
+
+      const { height, origin, width } = renderProps;
+
       /**
        * Canvas is scaled to make image sharper in high DPR devices. Therefore, when finding lines
        * by mouse events, mouse pointer position should scale by DPR ratio.
@@ -246,7 +253,7 @@ Grid.propTypes = {
   })),
   /**
    * Device pixel ratio.
-   * 2K device has dpr 2. Canvas is painted on a double size area. With canvas CSS scales down
+   * 4K device has dpr 2. Canvas is painted on a quadruple size area. With canvas CSS scales down
    * by half shall we have sharp images. It is caller's duty to scale down canvas area to
    * device screen size by setting CSS.
    * https://www.html5rocks.com/en/tutorials/canvas/hidpi
