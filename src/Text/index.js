@@ -6,7 +6,10 @@ class Text {
   /**
    * Render a single text on the given canvas context.
    */
-  static render(textObject, ctx, color, fontSize, position, text) {
+  static render(
+    textObject, ctx,
+    anchorOrigin, anchorOriginDescription, color, fontSize, position, text,
+  ) {
     /**
      * Skip if it text is empty.
      */
@@ -21,10 +24,66 @@ class Text {
     ctx.font = `${fontSize}px sans-serif`;
 
     /**
+     * anchorOriginDescription has higher priority if both anchorOrigin and anchorOriginDescription
+     * are defined.
+     */
+    let internalAnchorOrigin = anchorOrigin;
+    if (anchorOriginDescription) {
+      /**
+       * Anchor origin will be overriden by anchor description if it is defined.
+       */
+      const textHeight = fontSize;
+      const textWidth = ctx.measureText(text).width;
+
+      switch (anchorOriginDescription) {
+        case 'bottom-center':
+          internalAnchorOrigin = [-Math.round(textWidth / 2), 0];
+          break;
+        case 'bottom-left':
+          internalAnchorOrigin = [0, 0];
+          break;
+        case 'bottom-right':
+          internalAnchorOrigin = [-Math.round(textWidth), 0];
+          break;
+        case 'center':
+          internalAnchorOrigin = [-Math.round(textWidth / 2), Math.round(textHeight / 2)];
+          break;
+        case 'middle-left':
+          internalAnchorOrigin = [0, Math.round(textHeight / 2)];
+          break;
+        case 'middle-right':
+          internalAnchorOrigin = [-Math.round(textWidth), Math.round(textHeight / 2)];
+          break;
+        case 'top-center':
+          internalAnchorOrigin = [-Math.round(textWidth / 2), Math.round(textHeight)];
+          break;
+        case 'top-left':
+          internalAnchorOrigin = [0, Math.round(textHeight)];
+          break;
+        case 'top-right':
+          internalAnchorOrigin = [-Math.round(textWidth), Math.round(textHeight)];
+          break;
+        default:
+          internalAnchorOrigin = [0, 0];
+      }
+    } else if (anchorOrigin) {
+      internalAnchorOrigin = anchorOrigin;
+    } else {
+      /**
+       * Anchor origin is set as bottom-left point of the text if both anchor origin and anchor
+       * origin description are ommited.
+       */
+      internalAnchorOrigin = [0, 0];
+    }
+    textObject.anchorOrigin = internalAnchorOrigin;
+
+    /**
      * Persist render properties. It will be used in mouse events to find whether a mouse pointer is
      * on a text.
      */
     textObject.renderProps = {
+      anchorOrigin: internalAnchorOrigin,
+      anchorOriginDescription,
       color,
       font: ctx.font,
       fontSize,
@@ -36,7 +95,11 @@ class Text {
       width: ctx.measureText(text).width,
     };
 
-    ctx.fillText(text, position[0], position[1]);
+    ctx.fillText(
+      text,
+      position[0] + internalAnchorOrigin[0],
+      position[1] + internalAnchorOrigin[1],
+    );
 
     ctx.restore();
   }
@@ -133,6 +196,8 @@ class Text {
   render() {
     this.scheduler.execute(this.data, (eachText) => {
       const {
+        anchorOrigin,
+        anchorOriginDescription,
         color = 'black',
         fontSize = 10,
         position,
@@ -144,7 +209,10 @@ class Text {
        */
       const roundedFontSize = Math.round(fontSize);
 
-      Text.render(eachText, this.ctx, color, roundedFontSize, position, text);
+      Text.render(
+        eachText, this.ctx,
+        anchorOrigin, anchorOriginDescription, color, roundedFontSize, position, text,
+      );
     }).catch(() => { /* Scheduler throws error if previous function is not completed. */ });
   }
 }
@@ -157,9 +225,26 @@ Text.propTypes = {
   /**
    * A list of texts.
    * Internally, there is a renderProps property which persists properties calling canvas APIs.
-   * This design is in order to compatible to getSnapshotBeforeRender in the future.
+   * This design is in order to compatible with getSnapshotBeforeRender in the future.
    */
   data: PropTypes.arrayOf(PropTypes.shape({
+    /**
+     * Anchor origin is a point where it will be placed to the given position.
+     * A common use case would be defining text top left point as anchor origin [0, -10].
+     * It has lower priority if both anchorOrigin and anchorOriginDescription are defined.
+     * i.e. [x, y]. Default text bottom left point: [0, 0].
+     */
+    anchorOrigin: PropTypes.arrayOf(PropTypes.number),
+    /**
+     * Anchor origin is a point where it will be placed to the given position.
+     * A common use case would be defining text top left point as anchor origin.
+     * It has higher priority if both anchorOrigin and anchorOriginDescription are defined.
+     * i.e. [x, y] Default bottom-left.
+     */
+    anchorOriginDescription: PropTypes.oneOf([
+      'bottom-center', 'bottom-left', 'bottom-right', 'center', 'middle-left', 'middle-right',
+      'top-center', 'top-left', 'top-right',
+    ]),
     /**
      * Text colour.
      * Default black.
