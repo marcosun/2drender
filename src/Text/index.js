@@ -15,13 +15,39 @@ class Text {
      */
     if (isNullVoid(text) || text === '') return;
 
+    /**
+     * Round number values because decimal points significantly affects canvas performance.
+     */
+    const internalFontSize = Math.round(fontSize);
+    const internalPosition = [Math.round(position[0]), Math.round(position[1])];
+
+    /**
+     * Persist render properties. Render properties are processed via use defined properties, i.e.
+     * rounding decimal points, and are passed to canvas render APIs directly.
+     */
+    const renderProps = {
+      anchorOriginDescription,
+      color,
+      font: `${internalFontSize}px sans-serif`,
+      fontSize: internalFontSize,
+      position: internalPosition,
+      text,
+    };
+    textObject.renderProps = renderProps;
+
     ctx.save();
 
     /**
      * Set text colour and font.
      */
-    ctx.fillStyle = color;
-    ctx.font = `${fontSize}px sans-serif`;
+    ctx.fillStyle = renderProps.color;
+    ctx.font = renderProps.font;
+
+    /**
+     * Measure text width.
+     */
+    const internalWidth = Math.round(ctx.measureText(text).width);
+    renderProps.width = internalWidth;
 
     /**
      * anchorOriginDescription has higher priority if both anchorOrigin and anchorOriginDescription
@@ -32,8 +58,8 @@ class Text {
       /**
        * Anchor origin will be overriden by anchor description if it is defined.
        */
-      const textHeight = fontSize;
-      const textWidth = ctx.measureText(text).width;
+      const textHeight = renderProps.fontSize;
+      const textWidth = renderProps.width;
 
       switch (anchorOriginDescription) {
         case 'bottom-center':
@@ -76,29 +102,12 @@ class Text {
       internalAnchorOrigin = [0, 0];
     }
     textObject.anchorOrigin = internalAnchorOrigin;
-
-    /**
-     * Persist render properties. It will be used in mouse events to find whether a mouse pointer is
-     * on a text.
-     */
-    textObject.renderProps = {
-      anchorOrigin: internalAnchorOrigin,
-      anchorOriginDescription,
-      color,
-      font: ctx.font,
-      fontSize,
-      position,
-      text,
-      /**
-       * Measure text width.
-       */
-      width: ctx.measureText(text).width,
-    };
+    renderProps.anchorOrigin = internalAnchorOrigin;
 
     ctx.fillText(
-      text,
-      position[0] + internalAnchorOrigin[0],
-      position[1] + internalAnchorOrigin[1],
+      renderProps.text,
+      renderProps.position[0] + renderProps.anchorOrigin[0],
+      renderProps.position[1] + renderProps.anchorOrigin[1],
     );
 
     ctx.restore();
@@ -166,10 +175,11 @@ class Text {
       if (isNullVoid(renderProps)) return false;
 
       const {
+        anchorOrigin,
         /**
          * Currently, text cannot wrap.
          */
-        font: height,
+        fontSize: height,
         position,
         width,
       } = renderProps;
@@ -178,10 +188,10 @@ class Text {
        * Canvas is scaled to make image sharper in high DPR devices. Therefore, when finding lines
        * by mouse events, mouse pointer position should scale by DPR ratio.
        */
-      return position[0] <= x * this.dpr
-        && x * this.dpr <= position[0] + width
-        && position[1] <= y * this.dpr
-        && y * this.dpr <= position[1] + height;
+      return position[0] + anchorOrigin[0] <= x
+        && x <= position[0] + anchorOrigin[0] + width
+        && position[1] + anchorOrigin[1] >= y
+        && y >= position[1] + anchorOrigin[1] - height;
     }).map(({ renderProps, ...other }) => {
       /**
        * Internal render properties should not expose.
@@ -205,13 +215,14 @@ class Text {
       } = eachText;
 
       /**
-       * Round number values because decimal points significantly affects canvas performance.
+       * Assign default values.
        */
-      const roundedFontSize = Math.round(fontSize);
+      eachText.color = color;
+      eachText.fontSize = fontSize;
 
       Text.render(
         eachText, this.ctx,
-        anchorOrigin, anchorOriginDescription, color, roundedFontSize, position, text,
+        anchorOrigin, anchorOriginDescription, color, fontSize, position, text,
       );
     }).catch(() => { /* Scheduler throws error if previous function is not completed. */ });
   }
