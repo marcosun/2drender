@@ -69,7 +69,29 @@ class Marker {
    * and finally render marker image.
    * Order is critical and must be observed.
    */
-  static async render(markerObject, ctx, icon, height, width, position, anchorOrigin, rotation) {
+  static async render(markerObject, ctx, anchorOrigin, height, icon, position, rotation, width) {
+    /**
+     * Round number values because decimal points significantly affects canvas performance.
+     */
+    const internalAnchorOrigin = [Math.round(anchorOrigin[0]), Math.round(anchorOrigin[1])];
+    const internalHeight = Math.round(height);
+    const internalPosition = [Math.round(position[0]), Math.round(position[1])];
+    const internalWidth = Math.round(width);
+
+    /**
+     * Persist render properties. Render properties are processed via use defined properties, i.e.
+     * rounding decimal points, and are passed to canvas render APIs directly.
+     */
+    const renderProps = {
+      anchorOrigin: internalAnchorOrigin,
+      height: internalHeight,
+      icon,
+      position: internalPosition,
+      rotation,
+      width: internalWidth,
+    };
+    markerObject.renderProps = renderProps;
+
     const markerImage = await loadImage(icon);
 
     /**
@@ -81,34 +103,28 @@ class Marker {
     /**
      * Move coordinate origin point to rotation point to get ready for rotation.
      */
-    ctx.translate(position[0], position[1]);
+    ctx.translate(renderProps.position[0], renderProps.position[1]);
     /**
      * Rotate.
      */
-    ctx.rotate(rotation);
+    ctx.rotate(renderProps.rotation);
     /**
      * Move coordinate origin point back from rotation point, and move coordinate system
      * horizontally and vertically.
      */
-    ctx.translate(-position[0] + anchorOrigin[0], -position[1] + anchorOrigin[1]);
-
-    /**
-     * Persist render properties. It will be used in mouse events to find whether a mouse pointer is
-     * on a marker.
-     */
-    markerObject.renderProps = {
-      anchorOrigin,
-      height,
-      icon,
-      position,
-      rotation,
-      width,
-    };
+    ctx.translate(
+      -renderProps.position[0] + renderProps.anchorOrigin[0],
+      -renderProps.position[1] + renderProps.anchorOrigin[1],
+    );
 
     /**
      * Scale marker height and width.
      */
-    ctx.drawImage(markerImage, position[0], position[1], width, height);
+    ctx.drawImage(
+      markerImage,
+      renderProps.position[0], renderProps.position[1],
+      renderProps.width, renderProps.height,
+    );
 
     ctx.restore();
   }
@@ -148,26 +164,7 @@ class Marker {
     canvas.height = height;
     canvas.width = width;
 
-    /**
-     * Round number values because decimal points significantly affects canvas performance.
-     */
-    this.data = data.map(({
-      anchorOrigin = [0, 0],
-      height: markerHeight,
-      position,
-      rotation = 0,
-      width: markerWidth,
-      ...other
-    }) => {
-      return {
-        anchorOrigin: [Math.round(anchorOrigin[0]), Math.round(anchorOrigin[1])],
-        height: Math.round(markerHeight),
-        position: [Math.round(position[0]), Math.round(position[1])],
-        rotation,
-        width: Math.round(markerWidth),
-        ...other,
-      };
-    });
+    this.data = data;
   }
 
   /**
@@ -217,15 +214,21 @@ class Marker {
   render() {
     this.scheduler.execute(this.data, (eachMarker) => {
       const {
-        anchorOrigin,
+        anchorOrigin = [0, 0],
         height,
         icon,
         position,
-        rotation,
+        rotation = 0,
         width,
       } = eachMarker;
 
-      Marker.render(eachMarker, this.ctx, icon, height, width, position, anchorOrigin, rotation);
+      /**
+       * Assign default values.
+       */
+      eachMarker.anchorOrigin = anchorOrigin;
+      eachMarker.rotation = rotation;
+
+      Marker.render(eachMarker, this.ctx, anchorOrigin, height, icon, position, rotation, width);
     }).catch(() => { /* Scheduler throws error if previous function is not completed. */ });
   }
 }
@@ -241,12 +244,12 @@ Marker.propTypes = {
   /**
    * A list of markers.
    * Internally, there is a renderProps property which persists properties calling canvas APIs.
-   * This design is in order to compatible to getSnapshotBeforeRender in the future.
+   * This design is in order to compatible with getSnapshotBeforeRender in the future.
    */
   data: PropTypes.arrayOf(PropTypes.shape({
     /**
      * Anchor origin is a point where it will be placed to the given position.
-     * A common use case would be defining marker centre point as anchor origin .
+     * A common use case would be defining marker centre point as anchor origin.
      * i.e. [x, y] Default [0, 0].
      */
     anchorOrigin: PropTypes.arrayOf(PropTypes.number),
