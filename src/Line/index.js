@@ -8,13 +8,32 @@ class Line {
    */
   static render(lineObject, ctx, color, path, width) {
     /**
+     * Round number values because decimal points significantly affects canvas performance.
+     */
+    const internalPath = path.map(([x, y]) => {
+      return [Math.round(x), Math.round(y)];
+    });
+    const internalWidth = Math.round(width);
+
+    /**
+     * Persist render properties. Render properties are processed via use defined properties, i.e.
+     * rounding decimal points, and are passed to canvas render APIs directly.
+     */
+    const renderProps = {
+      color,
+      path: internalPath,
+      width: internalWidth,
+    };
+    lineObject.renderProps = renderProps;
+
+    /**
      * Skip if it doesn't have a line width.
      */
-    if (width === 0) return;
+    if (renderProps.width === 0) return;
     /**
      * Skip if it cannot become a line.
      */
-    if (path.length <= 1) return;
+    if (renderProps.path.length <= 1) return;
 
     /**
      * Create a path 2D instance to simplify finding whether a given point is on the polyline.
@@ -25,12 +44,12 @@ class Line {
     /**
      * Move pointer to the line starting point.
      */
-    const [startingX, startingY] = path[0];
+    const [startingX, startingY] = renderProps.path[0];
     path2D.moveTo(startingX, startingY);
     /**
      * Go through all points on line path to complete a polyline.
      */
-    path.slice(1).forEach(([x, y]) => {
+    renderProps.path.slice(1).forEach(([x, y]) => {
       path2D.lineTo(x, y);
     });
 
@@ -41,19 +60,14 @@ class Line {
     /**
      * Set line colour and width.
      */
-    ctx.strokeStyle = color;
-    ctx.lineWidth = width;
+    ctx.strokeStyle = renderProps.color;
+    ctx.lineWidth = renderProps.width;
 
     /**
      * Persist render properties. It will be used in mouse events to find whether a mouse pointer is
      * on a polyline.
      */
-    lineObject.renderProps = {
-      color,
-      path,
-      path2D,
-      width,
-    };
+    lineObject.renderProps.path2D = path2D;
 
     ctx.stroke(path2D);
   }
@@ -163,17 +177,14 @@ class Line {
       }
 
       /**
-       * Round number values because decimal points significantly affects canvas performance.
+       * Assign default values.
        */
-      const roundedPath = path.map(([x, y]) => {
-        return [Math.round(x), Math.round(y)];
-      });
-      /**
-       * Line width default to 1.
-       */
-      const roundedWidth = Math.round(width || 1);
+      if (isNullVoid(width)) {
+        width = 1;
+        eachLine.width = width;
+      }
 
-      Line.render(eachLine, this.ctx, color, roundedPath, roundedWidth);
+      Line.render(eachLine, this.ctx, color, path, width);
     }).catch(() => { /* Scheduler throws error if previous function is not completed. */ });
   }
 }
