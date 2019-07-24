@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { oneLineTrim } from 'common-tags';
 import Scheduler from '../Scheduler';
 import isNullVoid from '../utils/isNullVoid';
 
@@ -9,12 +10,32 @@ class Grid {
    */
   static render(
     gridObject, ctx, cache, cacheCanvas, cacheCtx,
-    origin, width, height, color, borderColor,
+    borderColor, color, dpr, height, origin, width,
   ) {
+    /**
+     * Round number values because decimal points significantly affects canvas performance.
+     */
+    const internalHeight = Math.round(height);
+    const internalOrigin = [Math.round(origin[0]), Math.round(origin[1])];
+    const internalWidth = Math.round(width);
+
+    /**
+     * Persist render properties. Render properties are processed via use defined properties, i.e.
+     * rounding decimal points, and are passed to canvas render APIs directly.
+     */
+    const renderProps = {
+      borderColor,
+      color,
+      height: internalHeight,
+      origin: internalOrigin,
+      width: internalWidth,
+    };
+    gridObject.renderProps = renderProps;
+
     /**
      * Skip if any one of width or height is 0.
      */
-    if (width === 0 || height === 0) return;
+    if (renderProps.width === 0 || renderProps.height === 0) return;
     /**
      * Declare image variable. Get image either from cache or calling canvas API.
      */
@@ -22,7 +43,9 @@ class Grid {
     /**
      * Grids have the same width, height, color and borderColor is cached.
      */
-    const cacheKey = `${width},${height},${color},${borderColor}`;
+    const cacheKey = oneLineTrim`
+      ${renderProps.width},${renderProps.height},${renderProps.color},${renderProps.borderColor}
+    `;
     if (cache.hasOwnProperty(cacheKey)) {
       /**
        * Use cached image.
@@ -33,7 +56,11 @@ class Grid {
        * Each grid will be drawn on an offscreen canvas and cached in memory so that we simply
        * return the cached image at the next time.
        */
-      image = Grid.renderOffscreen(cacheCanvas, cacheCtx, width, height, color, borderColor);
+      image = Grid.renderOffscreen(
+        cacheCanvas, cacheCtx,
+        renderProps.borderColor, renderProps.color, dpr,
+        renderProps.height, renderProps.width,
+      );
       /**
        * Save image in cache.
        */
@@ -41,29 +68,22 @@ class Grid {
     }
 
     /**
-     * Persist render properties. It will be used in mouse events to find whether a mouse pointer is
-     * on a grid.
+     * Put image data method is not affected by ctx.scale.
      */
-    gridObject.renderProps = {
-      borderColor,
-      color,
-      height,
-      origin,
-      width,
-    };
-
-    ctx.putImageData(image, origin[0], origin[1]);
+    ctx.putImageData(image, renderProps.origin[0] * dpr, renderProps.origin[1] * dpr);
   }
 
   /**
    * Return the grid image with minimal size.
    */
-  static renderOffscreen(canvas, ctx, width, height, color, borderColor) {
+  static renderOffscreen(canvas, ctx, borderColor, color, dpr, height, width) {
     /**
      * Clear canvas and adjust the size appropriate to this grid.
      */
-    canvas.width = width;
-    canvas.height = height;
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    ctx.scale(dpr, dpr);
+
     /**
      * Draw grid background colour.
      */
@@ -79,7 +99,10 @@ class Grid {
       ctx.strokeStyle = borderColor;
       ctx.strokeRect(0, 0, width, height);
     }
-    return ctx.getImageData(0, 0, width, height);
+    /**
+     * Get image data method is not affected by ctx.scale.
+     */
+    return ctx.getImageData(0, 0, canvas.width, canvas.height);
   }
 
   constructor(props = {}) {
@@ -140,17 +163,7 @@ class Grid {
     canvas.width = width * this.dpr;
     this.ctx.scale(this.dpr, this.dpr);
 
-    /**
-     * Round number values because decimal points significantly affects canvas performance.
-     */
-    this.data = data.map(({ height: gridHeight = 0, origin, width: gridWidth = 0, ...other }) => {
-      return {
-        height: Math.round(gridHeight * this.dpr),
-        origin: [Math.round(origin[0] * this.dpr), Math.round(origin[1] * this.dpr)],
-        width: Math.round(gridWidth * this.dpr),
-        ...other,
-      };
-    });
+    this.data = data;
   }
 
   /**
@@ -166,30 +179,18 @@ class Grid {
       const { height, origin, width } = renderProps;
 
       /**
-       * Canvas is scaled to make image sharper in high DPR devices. Therefore, when finding lines
-       * by mouse events, mouse pointer position should scale by DPR ratio.
+       * Render properties are not scaled by DPR, therefore, they can compare with mouse pointer
+       * position directly.
        */
-      return origin[0] <= x * this.dpr
-        && x * this.dpr <= origin[0] + width
-        && origin[1] <= y * this.dpr
-        && y * this.dpr <= origin[1] + height;
-    }).map(({
-      height,
-      origin,
-      renderProps,
-      width,
-      ...other
-    }) => {
+      return origin[0] <= x
+        && x <= origin[0] + width
+        && origin[1] <= y
+        && y <= origin[1] + height;
+    }).map(({ renderProps, ...other }) => {
       /**
        * Internal render properties should not expose.
-       * Scale down by DPR. DPR implementation details should not be awared by callers.
        */
-      return {
-        height: Math.round(height / this.dpr),
-        origin: [Math.round(origin[0] / this.dpr), Math.round(origin[1] / this.dpr)],
-        width: Math.round(width / this.dpr),
-        ...other,
-      };
+      return other;
     });
   }
 
@@ -201,14 +202,20 @@ class Grid {
       const {
         borderColor,
         color,
-        height,
+        height = 0,
         origin,
-        width,
+        width = 0,
       } = eachGrid;
+
+      /**
+       * Assign default values.
+       */
+      eachGrid.height = height;
+      eachGrid.width = width;
 
       Grid.render(
         eachGrid, this.ctx, this.cache, this.cacheCanvas, this.cacheCtx,
-        origin, width, height, color, borderColor,
+        borderColor, color, this.dpr, height, origin, width,
       );
     }).catch(() => { /* Scheduler throws error if previous function is not completed. */ });
   }
@@ -223,7 +230,7 @@ Grid.propTypes = {
    * A list of grids.
    * Grid definitions include grid shape and styles.
    * Internally, there is a renderProps property which persists properties calling canvas APIs.
-   * This design is in order to compatible to getSnapshotBeforeRender in the future.
+   * This design is in order to compatible with getSnapshotBeforeRender in the future.
    */
   data: PropTypes.arrayOf(PropTypes.shape({
     /**
