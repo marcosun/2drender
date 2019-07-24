@@ -20,6 +20,7 @@
   "author": "marcosun <marcoinbristol@gmail.com>",
   "license": "MIT",
   "dependencies": {
+    "common-tags": "^1.8.0",
     "mathjs": "^6.0.2",
     "prop-types": "^15.7.2"
   },
