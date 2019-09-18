@@ -12,12 +12,9 @@ class Scheduler {
   /**
    * Apply callback function to array items one by one.
    * Array items will be splitted to be executed in multiple frames so that
-   * main thread won't be blocked.
+   * main thread won't block.
    */
-  execute(array, callback) {
-    /**
-     * Instance object can be consumed by functions on prototype chain.
-     */
+  execute = (array, callback) => {
     this.array = [...array];
     this.callback = callback;
     /**
@@ -58,7 +55,7 @@ class Scheduler {
   /**
    * Execute callback with one array item at each time. Array will be mutated to empty at the end.
    */
-  requestIdleCallback = (IdleDeadline) => {
+  requestIdleCallback = async (IdleDeadline) => {
     /* eslint-disable-next-line no-constant-condition */
     while (true) {
       /**
@@ -91,7 +88,8 @@ class Scheduler {
        * The returned value from running callback function is buffered and to be returned
        * when the task completes.
        */
-      this.result.push(this.callback(this.array.shift()));
+      /* eslint-disable-next-line no-await-in-loop */
+      this.result.push(await this.callback(this.array.shift()));
     }
 
     /**
