@@ -228,7 +228,8 @@ class Marker {
       eachMarker.anchorOrigin = anchorOrigin;
       eachMarker.rotation = rotation;
 
-      Marker.render(eachMarker, this.ctx, anchorOrigin, height, icon, position, rotation, width);
+      return Marker.render(eachMarker, this.ctx, anchorOrigin, height, icon, position, rotation,
+        width);
     }).catch(() => { /* Scheduler throws error if previous function is not completed. */ });
   }
 }
