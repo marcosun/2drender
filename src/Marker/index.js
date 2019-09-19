@@ -148,6 +148,7 @@ class Marker {
     const {
       canvas,
       data = [],
+      dpr = 1,
       height,
       width,
     } = props;
@@ -157,12 +158,22 @@ class Marker {
      */
     if (isNullVoid(canvas) || isNullVoid(height) || isNullVoid(width)) return;
 
+    this.dpr = dpr;
+
     /**
      * We will manipulate canvas context later.
      */
     this.ctx = canvas.getContext('2d');
-    canvas.height = height;
-    canvas.width = width;
+    /**
+     * Clear canvas. Always clear canvas before render.
+     * 4K device has dpr 2. Canvas is painted on a quadruple size area. With canvas CSS scales down
+     * by half shall we have sharp images.
+     * Change canvas width restores canvas scale. Always set the correct scale so that callers are
+     * unaware of the implementation details of DPR.
+     */
+    canvas.height = height * this.dpr;
+    canvas.width = width * this.dpr;
+    this.ctx.scale(this.dpr, this.dpr);
 
     this.data = data;
   }
@@ -195,6 +206,8 @@ class Marker {
       /**
        * Given the fact that both positions are in the same coordinate system,
        * a rectangle contains a given position if the following condition passes.
+       * Render properties are not scaled by DPR, therefore, they can compare with mouse pointer
+       * position directly.
        */
       return position[0] <= transformedX
         && transformedX <= position[0] + width
@@ -234,9 +247,6 @@ class Marker {
   }
 }
 
-/**
- * Marker natively supports high DPR devices by passing through high resolution images.
- */
 Marker.propTypes = {
   /**
    * Markers are drawn on this canvas.
@@ -255,7 +265,7 @@ Marker.propTypes = {
      */
     anchorOrigin: PropTypes.arrayOf(PropTypes.number),
     /**
-     * Marker height. Scale marker height.
+     * Marker height. pixel height / DPR.
      */
     height: PropTypes.number.isRequired,
     /**
@@ -273,10 +283,21 @@ Marker.propTypes = {
      */
     rotation: PropTypes.number,
     /**
-     * Marker width. Scale marker width.
+     * Marker width. pixel width / DPR.
      */
     width: PropTypes.number.isRequired,
   })),
+  /**
+   * Device pixel ratio.
+   * 4K device has dpr 2. Canvas is painted on a quadruple size area. With canvas CSS scales down
+   * by half shall we have sharp images. It is caller's duty to scale down canvas area to
+   * device screen size by setting CSS.
+   * https://www.html5rocks.com/en/tutorials/canvas/hidpi
+   * Default 1.
+   * I don't want to expose the implementation details of supporting high DPR devices to the user.
+   * Therefore, all configuration properties have unit of CSS pixel.
+   */
+  dpr: PropTypes.number,
   /**
    * Canvas height.
    */
@@ -285,7 +306,6 @@ Marker.propTypes = {
    * Canvas width.
    */
   width: PropTypes.number.isRequired,
-
 };
 
 export default Marker;
