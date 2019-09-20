@@ -156,9 +156,10 @@ class Line {
 
   /**
    * Draw lines one by one.
+   * Return a promise so that caller understands as soon as render completes.
    */
   render() {
-    this.scheduler.execute(this.data, (eachLine) => {
+    return this.scheduler.execute(this.data, (eachLine) => {
       let {
         color,
         path,
@@ -185,7 +186,7 @@ class Line {
       }
 
       Line.render(eachLine, this.ctx, color, path, width);
-    }).catch(() => { /* Scheduler throws error if previous function is not completed. */ });
+    });
   }
 }
 

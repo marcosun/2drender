@@ -202,9 +202,10 @@ class Text {
 
   /**
    * Draw texts one by one.
+   * Return a promise so that caller understands as soon as render completes.
    */
   render() {
-    this.scheduler.execute(this.data, (eachText) => {
+    return this.scheduler.execute(this.data, (eachText) => {
       const {
         anchorOrigin,
         anchorOriginDescription,
@@ -224,7 +225,7 @@ class Text {
         eachText, this.ctx,
         anchorOrigin, anchorOriginDescription, color, fontSize, position, text,
       );
-    }).catch(() => { /* Scheduler throws error if previous function is not completed. */ });
+    });
   }
 }
 

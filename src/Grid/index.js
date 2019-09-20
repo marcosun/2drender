@@ -196,9 +196,10 @@ class Grid {
 
   /**
    * Render grids one by one.
+   * Return a promise so that caller understands as soon as render completes.
    */
   render() {
-    this.scheduler.execute(this.data, (eachGrid) => {
+    return this.scheduler.execute(this.data, (eachGrid) => {
       const {
         borderColor,
         color,
@@ -217,7 +218,7 @@ class Grid {
         eachGrid, this.ctx, this.cache, this.cacheCanvas, this.cacheCtx,
         borderColor, color, this.dpr, height, origin, width,
       );
-    }).catch(() => { /* Scheduler throws error if previous function is not completed. */ });
+    });
   }
 }
 

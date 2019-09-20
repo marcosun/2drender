@@ -223,9 +223,10 @@ class Marker {
 
   /**
    * Draw markers one by one.
+   * Return a promise so that caller understands as soon as render completes.
    */
   render() {
-    this.scheduler.execute(this.data, (eachMarker) => {
+    return this.scheduler.execute(this.data, (eachMarker) => {
       const {
         anchorOrigin = [0, 0],
         height,
@@ -243,7 +244,7 @@ class Marker {
 
       return Marker.render(eachMarker, this.ctx, anchorOrigin, height, icon, position, rotation,
         width);
-    }).catch(() => { /* Scheduler throws error if previous function is not completed. */ });
+    });
   }
 }
 
