@@ -68,8 +68,11 @@ class Marker {
    * Rotate coordinate first, then move horizontally and vertically,
    * and finally render marker image.
    * Order is critical and must be observed.
+   * Apply image cache to reduce the number of icon image loading calls.
    */
-  static async render(markerObject, ctx, anchorOrigin, height, icon, position, rotation, width) {
+  static async render(
+    markerObject, ctx, cache, anchorOrigin, height, icon, position, rotation, width,
+  ) {
     /**
      * Round number values because decimal points significantly affects canvas performance.
      */
@@ -92,7 +95,22 @@ class Marker {
     };
     markerObject.renderProps = renderProps;
 
-    const markerImage = await loadImage(icon);
+    /**
+     * Declare image variable. Get image either from cache or calling image loading API.
+     */
+    let markerImage;
+    if (cache.hasOwnProperty(icon)) {
+      /**
+       * Use cached image.
+       */
+      markerImage = cache[icon];
+    } else {
+      markerImage = await loadImage(icon);
+      /**
+       * Save image in cache.
+       */
+      cache[icon] = markerImage;
+    }
 
     /**
      * Methods to render marker contain coordinate horizontal and vertical move and rotation
@@ -134,6 +152,12 @@ class Marker {
      * Save props.
      */
     this.config(props);
+    /**
+     * We call window.Image to draw the same marker icon for only once by memorising the image of
+     * that icon at the first time of appearance and duplicate that image next time the exact
+     * marker icon appears again.
+     */
+    this.cache = {};
     /**
      * Scheduler helps to split a time consuming function to be executed in multiple frames.
      * In this way, time consuming function won't block UI thread.
@@ -242,8 +266,9 @@ class Marker {
       eachMarker.anchorOrigin = anchorOrigin;
       eachMarker.rotation = rotation;
 
-      return Marker.render(eachMarker, this.ctx, anchorOrigin, height, icon, position, rotation,
-        width);
+      return Marker.render(
+        eachMarker, this.ctx, this.cache, anchorOrigin, height, icon, position, rotation, width,
+      );
     });
   }
 }
