@@ -1,6 +1,6 @@
 {
   "name": "2drender",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Canvas 2D render engine.",
   "main": "src/index.js",
   "scripts": {
