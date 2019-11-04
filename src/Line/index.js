@@ -161,7 +161,7 @@ class Line {
   render() {
     return this.scheduler.execute(this.data, (eachLine) => {
       let {
-        color,
+        color = 'black',
         path,
         width,
       } = eachLine;
@@ -206,13 +206,13 @@ Line.propTypes = {
   data: PropTypes.arrayOf(PropTypes.shape({
     /**
      * Line fill colour.
-     * Default transparent.
+     * Default black.
      */
     color: PropTypes.string,
     /**
      * Line path. Supports line string. i.e. [[0, 0], [10, 10], [20, 20]]
      */
-    path: PropTypes.arrayOf(PropTypes.arrayOf(PropTypes.number)),
+    path: PropTypes.arrayOf(PropTypes.arrayOf(PropTypes.number)).isRequired,
     /**
      * Line width.
      * Default 1.

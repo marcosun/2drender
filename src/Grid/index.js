@@ -201,8 +201,8 @@ class Grid {
   render() {
     return this.scheduler.execute(this.data, (eachGrid) => {
       const {
-        borderColor,
-        color,
+        borderColor = 'black',
+        color = 'black',
         height = 0,
         origin,
         width = 0,
@@ -236,14 +236,14 @@ Grid.propTypes = {
   data: PropTypes.arrayOf(PropTypes.shape({
     /**
      * Grid border colour.
-     * Default transparent.
+     * Default black.
      */
     borderColor: PropTypes.string,
     /**
      * Grid fill colour.
-     * Default transparent.
+     * Default black.
      */
-    color: PropTypes.string.isRequired,
+    color: PropTypes.string,
     /**
      * Grid height.
      * Default 0.

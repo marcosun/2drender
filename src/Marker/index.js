@@ -295,9 +295,9 @@ Marker.propTypes = {
      */
     height: PropTypes.number.isRequired,
     /**
-     * Marker icon is whatever can be consumed by Image class, such as base64.
+     * Marker icon is whatever can be consumed by Image class.
      */
-    icon: PropTypes.any,
+    icon: PropTypes.any.isRequired,
     /**
      * Marker position. i.e. [x, y].
      * Marker anchor origin point is placed to this position.
