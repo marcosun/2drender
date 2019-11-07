@@ -163,7 +163,7 @@ class Line {
       let {
         color = 'black',
         path,
-        width,
+        width = 1,
       } = eachLine;
 
       /**
@@ -172,17 +172,9 @@ class Line {
        */
       if (this.getSnapshotBeforeRender) {
         const snapshot = this.getSnapshotBeforeRender(eachLine);
-        color = snapshot.color;
+        color = snapshot.color !== void 0 ? snapshot.color : 'black';
         path = snapshot.path;
-        width = snapshot.width;
-      }
-
-      /**
-       * Assign default values.
-       */
-      if (isNullVoid(width)) {
-        width = 1;
-        eachLine.width = width;
+        width = snapshot.width !== void 0 ? snapshot.width : 1;
       }
 
       Line.render(eachLine, this.ctx, color, path, width);
