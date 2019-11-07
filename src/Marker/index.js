@@ -173,6 +173,7 @@ class Marker {
       canvas,
       data = [],
       dpr = 1,
+      getSnapshotBeforeRender,
       height,
       width,
     } = props;
@@ -200,6 +201,7 @@ class Marker {
     this.ctx.scale(this.dpr, this.dpr);
 
     this.data = data;
+    this.getSnapshotBeforeRender = getSnapshotBeforeRender;
   }
 
   /**
@@ -251,7 +253,7 @@ class Marker {
    */
   render() {
     return this.scheduler.execute(this.data, (eachMarker) => {
-      const {
+      let {
         anchorOrigin = [0, 0],
         height,
         icon,
@@ -261,10 +263,18 @@ class Marker {
       } = eachMarker;
 
       /**
-       * Assign default values.
+       * If there exists a getSnapshotBeforeRender function, apply each marker to
+       * getSnapshotBeforeRender.
        */
-      eachMarker.anchorOrigin = anchorOrigin;
-      eachMarker.rotation = rotation;
+      if (this.getSnapshotBeforeRender) {
+        const snapshot = this.getSnapshotBeforeRender(eachMarker);
+        anchorOrigin = snapshot.anchorOrigin !== void 0 ? snapshot.anchorOrigin : [0, 0];
+        height = snapshot.height;
+        icon = snapshot.icon;
+        position = snapshot.position;
+        rotation = snapshot.rotation !== void 0 ? snapshot.rotation : 0;
+        width = snapshot.width;
+      }
 
       return Marker.render(
         eachMarker, this.ctx, this.cache, anchorOrigin, height, icon, position, rotation, width,
@@ -324,6 +334,15 @@ Marker.propTypes = {
    * Therefore, all configuration properties have unit of CSS pixel.
    */
   dpr: PropTypes.number,
+  /**
+   * getSnapshotBeforeRender is invoked right before calling canvas API to draw a marker.
+   * It enables you to do time consuming manipulations of each marker while taking advantage of
+   * none UI blocking tricks. If those time consuming works are done by yourself before passing
+   * them to Line, it ultimately results to a noticeable time elapse even though you have enough
+   * skills in writing non blocking javascript code. getSnapshotBeforeRender must return properties
+   * defined in data property (anchorOrigin, height, icon, position, rotation, and width).
+   */
+  getSnapshotBeforeRender: PropTypes.func,
   /**
    * Canvas height.
    */
