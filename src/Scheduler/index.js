@@ -35,13 +35,9 @@ class Scheduler {
     }
 
     /**
-     * Execute function must return a promise instantly.
-     * The time consuming functions should be executed after the creation of a promise instance
-     * to ensure there is a promise to be resolved.
+     * Allow all remaining executions to be delayed into the next frame.
      */
-    window.setTimeout(() => {
-      this.id = window.requestIdleCallback(this.requestIdleCallback);
-    });
+    this.id = window.requestIdleCallback(this.requestIdleCallback);
 
     /**
      * This promise will be resolved or rejected later.
