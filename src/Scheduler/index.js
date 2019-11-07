@@ -15,7 +15,13 @@ class Scheduler {
    * main thread won't block.
    */
   execute = (array, callback) => {
-    this.array = [...array];
+    this.array = array;
+    this.arrayLength = array.length;
+    /**
+     * requestIdleCallback function goes through array one by one. Current index represents the
+     * index number of processing item in the array.
+     */
+    this.currentIndex = 0;
     this.callback = callback;
     /**
      * Save the returned value from the callback function, and these values are returned
@@ -57,7 +63,7 @@ class Scheduler {
       /**
        * If array is empty, the scheduled task is complete.
        */
-      if (this.array.length === 0) {
+      if (this.currentIndex === this.arrayLength) {
         /**
          * Assign undefined to id means execution is complete.
          */
@@ -80,12 +86,13 @@ class Scheduler {
         break;
       }
       /**
-       * Mutate array to feed callback function with the first element in the array.
+       * Execute callback function with array item.
        * The returned value from running callback function is buffered and to be returned
        * when the task completes.
        */
       /* eslint-disable-next-line no-await-in-loop */
-      this.result.push(await this.callback(this.array.shift()));
+      this.result.push(await this.callback(this.array[this.currentIndex]));
+      this.currentIndex = this.currentIndex + 1;
     }
 
     /**
