@@ -16,7 +16,6 @@ class Scheduler {
    */
   execute = (array, callback) => {
     this.array = array;
-    this.arrayLength = array.length;
     /**
      * requestIdleCallback function goes through array one by one. Current index represents the
      * index number of processing item in the array.
@@ -63,7 +62,7 @@ class Scheduler {
       /**
        * If array is empty, the scheduled task is complete.
        */
-      if (this.currentIndex === this.arrayLength) {
+      if (this.currentIndex >= this.array.length) {
         /**
          * Assign undefined to id means execution is complete.
          */
